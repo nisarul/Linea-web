@@ -1,0 +1,27 @@
+# Build artefacts
+node_modules/
+dist/
+build/
+out/
+*.tsbuildinfo
+.vite/
+storybook-static/
+
+# Go
+bff/lineabff
+bff/lineabff.exe
+*.test
+*.out
+coverage
+coverage.out
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local dev / smoke
+.devdata/
+.smoketest*/

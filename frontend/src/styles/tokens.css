@@ -1,0 +1,202 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Linea design tokens.
+ *
+ * Two themes (light, dark) plus a "system" preference that the
+ * theme-switcher resolves to one of the two before applying the
+ * data-theme attribute. There is no third stylesheet for "system" —
+ * the value is always one of light|dark by the time CSS sees it.
+ *
+ * The tokens deliberately favour calm, off-white/off-black surfaces
+ * over pure white/pure black — taking the warmth cue from Things /
+ * Notion. Accents are restrained; sharp neutrals are reserved for
+ * cockpit/admin density (Linear-style precision).
+ *
+ * Naming convention:
+ *   --color-bg-*       backgrounds   (canvas, surface, sunken)
+ *   --color-fg-*       foregrounds   (primary, secondary, muted)
+ *   --color-border-*   borders       (subtle, default, strong)
+ *   --color-accent-*   accent colour (brand, hover, active, fg-on-accent)
+ *   --color-state-*    semantic      (info, success, warn, danger, fg variants)
+ *   --color-focus      focus ring colour
+ *
+ * Spacing, radius, type scales are defined further down.
+ */
+
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Theme tokens                                                       */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  :root,
+  [data-theme="light"] {
+    /* Surfaces (warm off-whites; never pure #fff) */
+    --color-bg-canvas:   oklch(98.5% 0.005 95);   /* page background */
+    --color-bg-surface:  oklch(100% 0 0);          /* cards, panels */
+    --color-bg-sunken:   oklch(96.5% 0.006 95);   /* inputs, code, subtle wells */
+    --color-bg-overlay:  oklch(0% 0 0 / 0.45);    /* modal scrim */
+
+    /* Foregrounds (true near-black, not pure black) */
+    --color-fg-primary:   oklch(20% 0.015 264);
+    --color-fg-secondary: oklch(35% 0.015 264);
+    --color-fg-muted:     oklch(55% 0.012 264);
+    --color-fg-subtle:    oklch(70% 0.010 264);
+    --color-fg-on-accent: oklch(98% 0.005 95);
+
+    /* Borders */
+    --color-border-subtle:  oklch(92% 0.006 264);
+    --color-border-default: oklch(86% 0.008 264);
+    --color-border-strong:  oklch(72% 0.010 264);
+
+    /* Accent — restrained slate-blue */
+    --color-accent:         oklch(54% 0.10 250);
+    --color-accent-hover:   oklch(48% 0.11 250);
+    --color-accent-active:  oklch(42% 0.12 250);
+    --color-accent-subtle:  oklch(95% 0.025 250); /* tinted bg under accent text */
+
+    /* Semantic states */
+    --color-state-info:     oklch(55% 0.10 230);
+    --color-state-success:  oklch(58% 0.12 145);
+    --color-state-warn:     oklch(70% 0.14 75);
+    --color-state-danger:   oklch(54% 0.18 25);
+    --color-state-info-bg:    oklch(96% 0.025 230);
+    --color-state-success-bg: oklch(96% 0.025 145);
+    --color-state-warn-bg:    oklch(96% 0.030 75);
+    --color-state-danger-bg:  oklch(96% 0.030 25);
+
+    /* Focus ring */
+    --color-focus: oklch(60% 0.18 250);
+
+    /* Elevation (light: soft, layered shadows) */
+    --shadow-1: 0 1px 2px 0 rgb(0 0 0 / 0.04),
+                0 1px 1px 0 rgb(0 0 0 / 0.03);
+    --shadow-2: 0 2px 4px -1px rgb(0 0 0 / 0.06),
+                0 4px 6px -1px rgb(0 0 0 / 0.04);
+    --shadow-3: 0 8px 12px -3px rgb(0 0 0 / 0.08),
+                0 4px 6px -4px rgb(0 0 0 / 0.05);
+    --shadow-4: 0 24px 38px -8px rgb(0 0 0 / 0.12),
+                0 12px 18px -8px rgb(0 0 0 / 0.08);
+  }
+
+  [data-theme="dark"] {
+    /* Surfaces (warm off-blacks; never pure #000) */
+    --color-bg-canvas:   oklch(15% 0.012 264);
+    --color-bg-surface:  oklch(19% 0.013 264);
+    --color-bg-sunken:   oklch(13% 0.011 264);
+    --color-bg-overlay:  oklch(0% 0 0 / 0.65);
+
+    /* Foregrounds */
+    --color-fg-primary:   oklch(96% 0.005 95);
+    --color-fg-secondary: oklch(82% 0.008 95);
+    --color-fg-muted:     oklch(64% 0.010 264);
+    --color-fg-subtle:    oklch(48% 0.012 264);
+    --color-fg-on-accent: oklch(98% 0.005 95);
+
+    /* Borders */
+    --color-border-subtle:  oklch(26% 0.014 264);
+    --color-border-default: oklch(33% 0.014 264);
+    --color-border-strong:  oklch(48% 0.014 264);
+
+    /* Accent — same hue, slightly brighter for dark */
+    --color-accent:         oklch(68% 0.12 250);
+    --color-accent-hover:   oklch(73% 0.13 250);
+    --color-accent-active:  oklch(78% 0.14 250);
+    --color-accent-subtle:  oklch(28% 0.04 250);
+
+    /* Semantic states */
+    --color-state-info:     oklch(70% 0.12 230);
+    --color-state-success:  oklch(72% 0.14 145);
+    --color-state-warn:     oklch(78% 0.15 75);
+    --color-state-danger:   oklch(70% 0.17 25);
+    --color-state-info-bg:    oklch(26% 0.04 230);
+    --color-state-success-bg: oklch(26% 0.04 145);
+    --color-state-warn-bg:    oklch(26% 0.05 75);
+    --color-state-danger-bg:  oklch(26% 0.05 25);
+
+    --color-focus: oklch(72% 0.16 250);
+
+    --shadow-1: 0 1px 2px 0 rgb(0 0 0 / 0.45),
+                0 1px 1px 0 rgb(0 0 0 / 0.35);
+    --shadow-2: 0 2px 4px -1px rgb(0 0 0 / 0.55),
+                0 4px 6px -1px rgb(0 0 0 / 0.40);
+    --shadow-3: 0 8px 12px -3px rgb(0 0 0 / 0.55),
+                0 4px 6px -4px rgb(0 0 0 / 0.40);
+    --shadow-4: 0 24px 38px -8px rgb(0 0 0 / 0.65),
+                0 12px 18px -8px rgb(0 0 0 / 0.50);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Type / spacing / radius scales                                     */
+/* ------------------------------------------------------------------ */
+
+@theme {
+  --font-sans:    "Inter", "Inter Display", ui-sans-serif, system-ui, sans-serif;
+  --font-serif:   "Source Serif 4", ui-serif, Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Spacing — default Tailwind scale plus a few denser steps for
+     cockpit panels (px-1.5, gap-2.5 etc. already exist in Tailwind 4). */
+
+  /* Radii — slightly larger than Tailwind defaults; rounded but not pill */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+
+  /* Motion (Linear-style snappy easing) */
+  --ease-snap:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-instant: 80ms;
+  --duration-fast:    140ms;
+  --duration-base:    200ms;
+  --duration-slow:    320ms;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base resets / globals                                              */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    background: var(--color-bg-canvas);
+    color: var(--color-fg-primary);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01"; /* Inter optional features */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Headlines: pair humanist sans with a high-contrast serif on long
+     reading surfaces. h1/h2 default to serif; the cockpit overrides
+     this locally where it wants the Linear feel. */
+  h1, h2 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+  }
+  /* Multilingual person names are routinely RTL; honour the writing
+     direction of inline text wherever it appears. */
+  bdi, [dir="auto"] {
+    unicode-bidi: plaintext;
+  }
+  /* Reduced motion: honour user preference globally. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* Focus ring — visible, never removed, theme-aware. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}

@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Multi-stage build for Linea-web (SPA + BFF).
+# The final distroless image carries:
+#   /usr/local/bin/lineabff   — the Go BFF binary
+#   /app/static/              — the built React SPA assets
+# The BFF serves /app/static/ for any non-API route.
+
+# ---------- 1. SPA build ----------
+FROM node:24-alpine AS spa
+WORKDIR /spa
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
+# ---------- 2. BFF build ----------
+FROM golang:1.25-alpine AS bff
+WORKDIR /src
+
+COPY bff/go.mod bff/go.sum* ./
+RUN go mod download
+
+COPY bff/ ./
+ARG VERSION=0.0.1
+RUN CGO_ENABLED=0 go build \
+    -trimpath \
+    -ldflags "-s -w -X main.version=${VERSION}" \
+    -o /out/lineabff \
+    ./cmd/lineabff
+
+# ---------- 3. Runtime ----------
+FROM gcr.io/distroless/static-debian12:nonroot
+WORKDIR /app
+
+COPY --from=bff /out/lineabff /usr/local/bin/lineabff
+COPY --from=spa /spa/dist /app/static
+
+ENV LINEA_BFF_ADDR=":8090" \
+    LINEA_BFF_STATIC_DIR="/app/static" \
+    LINEA_BFF_COOKIE_SECURE="true"
+
+EXPOSE 8090
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/lineabff"]

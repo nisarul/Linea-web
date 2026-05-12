@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Local dev stack: Linea-server + Keycloak + Linea-web.
+# Once the BFF reaches phase 2 (real OIDC + API proxy), Linea-web
+# will be wired against the linea-server in this same compose so a
+# single `docker compose up` brings up the entire end-to-end app.
+
+version: "3.9"
+
+services:
+  lineaweb:
+    build:
+      context: ..
+      dockerfile: deploy/Containerfile
+    environment:
+      LINEA_BFF_ADDR: ":8090"
+      LINEA_BFF_COOKIE_SECURE: "false"
+      # Phase 2: LINEA_BFF_UPSTREAM_URL: http://lineasrv:8080
+      # Phase 2: LINEA_OIDC_ISSUER:      http://keycloak:8080/realms/linea
+      # Phase 2: LINEA_OIDC_AUDIENCE:    linea-cli
+    ports:
+      - "8090:8090"
