@@ -1,33 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Badge, Button, Card, CardBody, CardHeader, Input, ThemeToggle } from "@/components";
+import { Badge, Button, Card, CardBody, CardHeader, Input } from "@/components";
 
 /**
- * Phase-1 placeholder application surface.
- *
- * Demonstrates the design tokens, theming, and the seed component
- * library. Replaced wholesale once the real app shell lands in
- * phase 2.
+ * DesignSystemPage demonstrates the tokens + seed component
+ * library. Useful as a living style reference during development.
  */
-export function App() {
+export function DesignSystemPage() {
   return (
-    <div className="min-h-screen bg-(--color-bg-canvas) text-(--color-fg-primary)">
-      <header className="border-b border-(--color-border-subtle) bg-(--color-bg-surface)">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <div className="flex items-baseline gap-2">
-            <span className="font-serif text-xl tracking-tight">Linea</span>
-            <span className="text-xs text-(--color-fg-muted)">
-              lineage, without assumptions
-            </span>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 py-12 space-y-10">
+    <div className="space-y-10">
         <section>
           <h1 className="font-serif text-3xl tracking-tight">Design system</h1>
           <p className="mt-2 max-w-prose text-(--color-fg-secondary)">
-            Linea-web phase 1: tokens, theming, and a seed of the component
+            Linea-web design tokens, theming primitives, and the seed component
             library. Switch the theme with the toggle in the header — light,
             dark, and system are all first-class.
           </p>
@@ -98,7 +82,6 @@ export function App() {
             </ul>
           </CardBody>
         </Card>
-      </main>
     </div>
   );
 }

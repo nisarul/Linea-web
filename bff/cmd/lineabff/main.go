@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Command lineabff is the Linea Backend-For-Frontend.
-//
-// Phase 1 (current): minimal scaffold — serves the built SPA from
-// disk, exposes /healthz, sets the linea_theme cookie based on
-// query param so the SPA can persist theme choice. OIDC + token
-// proxy land in phase 2.
 package main
 
 import (
@@ -16,12 +11,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/nisarul/Linea-web/bff/internal/server"
 )
 
-// version is overridden at build time via -ldflags.
-var version = "0.0.1-phase1"
+var version = "0.0.2-phase2"
 
 func main() {
 	if err := run(); err != nil {
@@ -31,30 +26,38 @@ func main() {
 }
 
 func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	cfg := server.ConfigFromEnv()
-	srv := server.New(cfg, logger, version)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	srv, err := server.New(ctx, cfg, logger, version)
+	if err != nil {
+		return err
+	}
+	defer srv.Close()
 
 	httpSrv := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: srv,
+		Addr:              cfg.Addr,
+		Handler:           srv,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	logger.Info("starting lineabff",
 		slog.String("version", version),
 		slog.String("addr", cfg.Addr),
 		slog.String("static_dir", cfg.StaticDir),
+		slog.String("upstream", cfg.UpstreamURL),
+		slog.Bool("oidc", cfg.OIDCIssuerURL != ""),
 	)
-
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer cancel()
 
 	go func() {
 		<-ctx.Done()
-		_ = httpSrv.Shutdown(context.Background())
+		shutdownCtx, c := context.WithTimeout(context.Background(), 10*time.Second)
+		defer c()
+		_ = httpSrv.Shutdown(shutdownCtx)
 	}()
 
 	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

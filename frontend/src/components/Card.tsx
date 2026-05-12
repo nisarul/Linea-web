@@ -14,6 +14,8 @@ export interface CardProps
   extends HTMLAttributes<HTMLDivElement>,
     PropsWithChildren {
   elevation?: CardElevation;
+  /** When true, applies hover lift + cursor-pointer affordances. */
+  interactive?: boolean;
 }
 
 const elevations: Record<CardElevation, string> = {
@@ -24,6 +26,7 @@ const elevations: Record<CardElevation, string> = {
 
 export function Card({
   elevation = "raised",
+  interactive = false,
   className,
   children,
   ...rest
@@ -34,6 +37,8 @@ export function Card({
         "bg-(--color-bg-surface) text-(--color-fg-primary)",
         "border border-(--color-border-subtle) rounded-(--radius-lg)",
         elevations[elevation],
+        interactive &&
+          "transition-shadow hover:shadow-(--shadow-3) hover:border-(--color-border-default) cursor-pointer",
         className,
       )}
       {...rest}

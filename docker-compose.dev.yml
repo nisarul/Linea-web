@@ -1,22 +1,73 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Local dev stack: Linea-server + Keycloak + Linea-web.
-# Once the BFF reaches phase 2 (real OIDC + API proxy), Linea-web
-# will be wired against the linea-server in this same compose so a
-# single `docker compose up` brings up the entire end-to-end app.
-
-version: "3.9"
+# Local dev stack for Linea-web: brings up Keycloak (IdP),
+# Linea-server (backend), and Linea-web (frontend + BFF).
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Then open http://localhost:8090 — clicking "Sign in" routes
+# to Keycloak at http://localhost:8081 with realm "linea" and
+# a pre-seeded user (alice / alice).
 
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./deploy/keycloak/linea-realm.json:/opt/keycloak/data/import/linea-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo done"]
+      interval: 5s
+      retries: 30
+
+  lineasrv:
+    image: ghcr.io/nisarul/linea-server:v0.2.0
+    # If the image isn't published yet, build locally instead:
+    # build:
+    #   context: ../Linea-server
+    environment:
+      LINEA_ADDR: ":8080"
+      LINEA_DATA_DIR: "/data"
+      LINEA_OIDC_ISSUER: "http://keycloak:8080/realms/linea"
+      LINEA_OIDC_AUDIENCE: "linea-web"
+      LINEA_DEV_INSECURE: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - linea-server-data:/data
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   lineaweb:
     build:
-      context: ..
+      context: .
       dockerfile: deploy/Containerfile
     environment:
       LINEA_BFF_ADDR: ":8090"
       LINEA_BFF_COOKIE_SECURE: "false"
-      # Phase 2: LINEA_BFF_UPSTREAM_URL: http://lineasrv:8080
-      # Phase 2: LINEA_OIDC_ISSUER:      http://keycloak:8080/realms/linea
-      # Phase 2: LINEA_OIDC_AUDIENCE:    linea-cli
+      LINEA_BFF_SESSION_DIR: "/data/sessions"
+      LINEA_BFF_UPSTREAM_URL: "http://lineasrv:8080"
+      LINEA_OIDC_ISSUER: "http://keycloak:8080/realms/linea"
+      LINEA_OIDC_CLIENT_ID: "linea-web"
+      LINEA_OIDC_CLIENT_SECRET: "linea-web-dev-secret"
+      LINEA_OIDC_REDIRECT_URL: "http://localhost:8090/auth/callback"
+      LINEA_BFF_POST_LOGIN_URL: "/"
     ports:
       - "8090:8090"
+    volumes:
+      - linea-web-data:/data
+    depends_on:
+      lineasrv:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
+volumes:
+  linea-server-data:
+  linea-web-data:
