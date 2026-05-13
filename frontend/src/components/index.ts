@@ -17,8 +17,14 @@ export type { DialogProps } from "./Dialog";
 export { Select } from "./Select";
 export type { SelectProps } from "./Select";
 
+export { Textarea } from "./Textarea";
+export type { TextareaProps } from "./Textarea";
+
 export { NewGenealogyDialog } from "./NewGenealogyDialog";
 export type { NewGenealogyDialogProps } from "./NewGenealogyDialog";
+
+export { NewProposalDialog } from "./NewProposalDialog";
+export type { NewProposalDialogProps } from "./NewProposalDialog";
 
 export { SubNav } from "./SubNav";
 export type { SubNavItem } from "./SubNav";

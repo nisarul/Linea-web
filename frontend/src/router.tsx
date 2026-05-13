@@ -17,6 +17,8 @@ import { GenealogyDetailLayout } from "@/pages/GenealogyDetailLayout";
 import { GenealogyOverviewPage } from "@/pages/GenealogyOverviewPage";
 import { PersonsListPage } from "@/pages/PersonsListPage";
 import { PersonDetailPage } from "@/pages/PersonDetailPage";
+import { ProposalsListPage } from "@/pages/ProposalsListPage";
+import { ProposalDetailPage } from "@/pages/ProposalDetailPage";
 import { DesignSystemPage } from "@/pages/DesignSystemPage";
 
 // Tree canvas pulls in Konva (~300 kB). Code-split so it only
@@ -75,6 +77,18 @@ const treeRoute = createRoute({
   component: GenealogyTreePage,
 });
 
+const proposalsListRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "proposals",
+  component: ProposalsListPage,
+});
+
+const proposalDetailRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "proposals/$proposalId",
+  component: ProposalDetailPage,
+});
+
 const designRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/design",
@@ -89,6 +103,8 @@ const routeTree = rootRoute.addChildren([
     personsListRoute,
     personDetailRoute,
     treeRoute,
+    proposalsListRoute,
+    proposalDetailRoute,
   ]),
   designRoute,
 ]);
