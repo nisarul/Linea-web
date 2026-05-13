@@ -1,78 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { Badge, Button, Card, CardBody, CardHeader, Dialog, Input, Select } from "@/components";
+import { useParams } from "@tanstack/react-router";
+import { Badge, Button, Card, CardBody, CardHeader, Input, Select } from "@/components";
 import {
   canManageMembers,
-  deleteGenealogy,
   getGenealogy,
   isOwner,
-  leaveGenealogy,
   listMembers,
   prettyRole,
-  prettyVisibility,
   removeMember,
-  updateVisibility,
   upsertMembership,
   type Genealogy,
   type GenealogyRole,
   type Membership,
-  type Visibility,
 } from "@/lib/genealogies";
 import { ApiError } from "@/lib/api";
 
-export function GenealogyDetailPage() {
+/**
+ * Overview tab for a genealogy: identity facts + members section.
+ * The header, breadcrumbs, and owner actions live in
+ * GenealogyDetailLayout; this page renders only the body content.
+ */
+export function GenealogyOverviewPage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const q = useQuery({
     queryKey: ["genealogy", id],
     queryFn: () => getGenealogy(id),
   });
-
-  if (q.isLoading) {
-    return <div className="h-32 animate-pulse rounded-lg bg-(--color-bg-sunken)" aria-hidden />;
-  }
-  if (q.isError) {
-    return (
-      <Card>
-        <CardBody className="text-(--color-fg-danger)">
-          Could not load: {(q.error as Error).message}{" "}
-          <Link to="/" className="underline">Back to dashboard</Link>
-        </CardBody>
-      </Card>
-    );
-  }
   if (!q.data?.genealogy) return null;
-  return <Detail g={q.data.genealogy} />;
-}
+  const g = q.data.genealogy;
 
-function Detail({ g }: { g: Genealogy }) {
   return (
     <div className="space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <Link
-            to="/"
-            className="text-xs text-(--color-fg-muted) hover:text-(--color-fg-secondary)"
-          >
-            ← Dashboard
-          </Link>
-          <h1 className="mt-1 font-serif text-3xl tracking-tight">{g.name}</h1>
-          <div className="mt-2 flex items-center gap-2 text-xs text-(--color-fg-muted)">
-            <Badge tone={visibilityTone(g.visibility)}>
-              {prettyVisibility(g.visibility)}
-            </Badge>
-            <span>·</span>
-            <span>Your role: {prettyRole(g.myRole)}</span>
-          </div>
-        </div>
-        <OwnerActions g={g} />
-      </header>
-
       <section className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <h2 className="font-serif text-base tracking-tight">Overview</h2>
+            <h2 className="font-serif text-base tracking-tight">Identity</h2>
           </CardHeader>
           <CardBody className="space-y-2 text-sm text-(--color-fg-secondary)">
             <div>
@@ -92,11 +56,13 @@ function Detail({ g }: { g: Genealogy }) {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <h2 className="font-serif text-base tracking-tight">Graph</h2>
+            <h2 className="font-serif text-base tracking-tight">What's here</h2>
           </CardHeader>
-          <CardBody className="text-sm text-(--color-fg-muted)">
-            The interactive lineage canvas arrives in phase 4. Persons and
-            relationships are not yet rendered.
+          <CardBody className="text-sm text-(--color-fg-secondary)">
+            Use the <strong>Persons</strong> tab to browse individuals and
+            their relationships, and the <strong>Tree</strong> tab to render
+            ancestor or descendant trees from any focus person. Proposal-based
+            edits and the curator review queue arrive in phase 5.
           </CardBody>
         </Card>
       </section>
@@ -106,93 +72,16 @@ function Detail({ g }: { g: Genealogy }) {
   );
 }
 
-function OwnerActions({ g }: { g: Genealogy }) {
-  const qc = useQueryClient();
-  const nav = useNavigate();
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  const vis = useMutation({
-    mutationFn: (v: Visibility) => updateVisibility(g.id, v),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["genealogy", g.id] }),
-  });
-  const del = useMutation({
-    mutationFn: () => deleteGenealogy(g.id),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["genealogies"] });
-      await nav({ to: "/" });
-    },
-  });
-  const leave = useMutation({
-    mutationFn: () => leaveGenealogy(g.id),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["genealogies"] });
-      await nav({ to: "/" });
-    },
-  });
-
-  if (!isOwner(g.myRole)) {
-    if (g.myRole === "GENEALOGY_ROLE_NONE" || g.myRole === "GENEALOGY_ROLE_UNSPECIFIED") {
-      return null;
-    }
-    return (
-      <Button variant="ghost" onClick={() => leave.mutate()} isLoading={leave.isPending}>
-        Leave genealogy
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={g.visibility}
-        onChange={(e) => vis.mutate(e.target.value as Visibility)}
-        disabled={vis.isPending}
-        className="w-40"
-        aria-label="Visibility"
-      >
-        <option value="VISIBILITY_PRIVATE">Private</option>
-        <option value="VISIBILITY_UNLISTED">Unlisted</option>
-        <option value="VISIBILITY_PUBLIC">Public</option>
-      </Select>
-      <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-        Delete
-      </Button>
-
-      <Dialog
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        title="Delete genealogy?"
-        description={`This permanently deletes "${g.name}" and all of its data. This cannot be undone.`}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setConfirmDelete(false)} disabled={del.isPending}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => del.mutate()}
-              isLoading={del.isPending}
-            >
-              Delete permanently
-            </Button>
-          </>
-        }
-      >
-        <p className="text-sm text-(--color-fg-secondary)">
-          Type the genealogy name to confirm if you want a safety net — for now,
-          the delete button does the work directly. We will tighten this in
-          phase 9 hardening.
-        </p>
-      </Dialog>
-    </div>
-  );
-}
-
 function MembersSection({ g }: { g: Genealogy }) {
+  const enabled =
+    canManageMembers(g.myRole) ||
+    g.myRole === "GENEALOGY_ROLE_CONTRIBUTOR" ||
+    g.myRole === "GENEALOGY_ROLE_VIEWER";
+
   const q = useQuery({
     queryKey: ["members", g.id],
     queryFn: () => listMembers(g.id),
-    enabled: canManageMembers(g.myRole) || g.myRole === "GENEALOGY_ROLE_CONTRIBUTOR" || g.myRole === "GENEALOGY_ROLE_VIEWER",
+    enabled,
   });
   const members = q.data?.memberships ?? [];
 
@@ -203,14 +92,16 @@ function MembersSection({ g }: { g: Genealogy }) {
         <span className="text-xs text-(--color-fg-muted)">{members.length}</span>
       </div>
       {canManageMembers(g.myRole) && <AddMemberRow g={g} />}
-      {q.isLoading ? (
+      {!enabled ? (
+        <Card><CardBody className="text-sm text-(--color-fg-muted)">
+          Member list is visible to members only.
+        </CardBody></Card>
+      ) : q.isLoading ? (
         <div className="h-24 animate-pulse rounded-lg bg-(--color-bg-sunken)" />
       ) : members.length === 0 ? (
-        <Card>
-          <CardBody className="text-sm text-(--color-fg-muted)">
-            No explicit members yet.
-          </CardBody>
-        </Card>
+        <Card><CardBody className="text-sm text-(--color-fg-muted)">
+          No explicit members yet.
+        </CardBody></Card>
       ) : (
         <Card>
           <ul className="divide-y divide-(--color-border-subtle)">
@@ -349,13 +240,4 @@ function MemberRow({ g, m }: { g: Genealogy; m: Membership }) {
       )}
     </li>
   );
-}
-
-function visibilityTone(v: Visibility) {
-  switch (v) {
-    case "VISIBILITY_PUBLIC":   return "success" as const;
-    case "VISIBILITY_UNLISTED": return "info" as const;
-    case "VISIBILITY_PRIVATE":  return "neutral" as const;
-    default:                    return "neutral" as const;
-  }
 }

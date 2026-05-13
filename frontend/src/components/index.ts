@@ -20,4 +20,10 @@ export type { SelectProps } from "./Select";
 export { NewGenealogyDialog } from "./NewGenealogyDialog";
 export type { NewGenealogyDialogProps } from "./NewGenealogyDialog";
 
+export { SubNav } from "./SubNav";
+export type { SubNavItem } from "./SubNav";
+
+export { TreeCanvas } from "./TreeCanvas";
+export type { TreeCanvasProps } from "./TreeCanvas";
+
 export { ThemeToggle } from "./ThemeToggle";

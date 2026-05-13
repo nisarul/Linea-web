@@ -3,6 +3,7 @@
 // TanStack Router setup. We use the code-first (no codegen) flow:
 // rootRoute + child routes assembled into a route tree.
 
+import { lazy } from "react";
 import {
   createRootRoute,
   createRoute,
@@ -12,8 +13,17 @@ import {
 import { AppShell } from "@/layout/AppShell";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { GenealogiesPage } from "@/pages/GenealogiesPage";
-import { GenealogyDetailPage } from "@/pages/GenealogyDetailPage";
+import { GenealogyDetailLayout } from "@/pages/GenealogyDetailLayout";
+import { GenealogyOverviewPage } from "@/pages/GenealogyOverviewPage";
+import { PersonsListPage } from "@/pages/PersonsListPage";
+import { PersonDetailPage } from "@/pages/PersonDetailPage";
 import { DesignSystemPage } from "@/pages/DesignSystemPage";
+
+// Tree canvas pulls in Konva (~300 kB). Code-split so it only
+// loads when the user opens the Tree tab.
+const GenealogyTreePage = lazy(() =>
+  import("@/pages/GenealogyTreePage").then((m) => ({ default: m.GenealogyTreePage })),
+);
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -35,10 +45,34 @@ const genealogiesRoute = createRoute({
   component: GenealogiesPage,
 });
 
-const genealogyDetailRoute = createRoute({
+const genealogyLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/g/$id",
-  component: GenealogyDetailPage,
+  component: GenealogyDetailLayout,
+});
+
+const genealogyOverviewRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "/",
+  component: GenealogyOverviewPage,
+});
+
+const personsListRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "persons",
+  component: PersonsListPage,
+});
+
+const personDetailRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "persons/$personId",
+  component: PersonDetailPage,
+});
+
+const treeRoute = createRoute({
+  getParentRoute: () => genealogyLayoutRoute,
+  path: "tree",
+  component: GenealogyTreePage,
 });
 
 const designRoute = createRoute({
@@ -50,7 +84,12 @@ const designRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   genealogiesRoute,
-  genealogyDetailRoute,
+  genealogyLayoutRoute.addChildren([
+    genealogyOverviewRoute,
+    personsListRoute,
+    personDetailRoute,
+    treeRoute,
+  ]),
   designRoute,
 ]);
 
