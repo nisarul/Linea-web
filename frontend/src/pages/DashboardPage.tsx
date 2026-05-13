@@ -22,26 +22,57 @@ export function DashboardPage() {
 }
 
 function SignedOutPitch() {
+  const q = useQuery({
+    queryKey: ["genealogies", "public-discovery"],
+    queryFn: listGenealogies,
+    staleTime: 60_000,
+  });
+  const publics = (q.data?.genealogies ?? []).filter(
+    (g) => g.visibility === "VISIBILITY_PUBLIC",
+  );
+
   return (
-    <div className="mx-auto max-w-2xl py-16 text-center">
-      <h1 className="font-serif text-4xl tracking-tight">
-        Lineage, without assumptions.
-      </h1>
-      <p className="mx-auto mt-4 max-w-lg text-(--color-fg-secondary)">
-        Linea is a genealogical knowledge graph that records evidence
-        with explicit certainty, gaps with explicit size, and identity
-        with auditable history. Sign in to start a private genealogy or
-        contribute to a public one.
-      </p>
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <Button
-          variant="primary"
-          size="lg"
-          onClick={() => login(window.location.pathname)}
-        >
-          Sign in to get started
-        </Button>
-      </div>
+    <div className="space-y-12 py-8">
+      <section className="mx-auto max-w-2xl text-center">
+        <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
+          Lineage, without assumptions.
+        </h1>
+        <p className="mx-auto mt-4 max-w-lg text-(--color-fg-secondary)">
+          Linea is a genealogical knowledge graph that records evidence with
+          explicit certainty, gaps with explicit size, and identity with
+          auditable history. Sign in to start a private genealogy or contribute
+          to a public one — or browse public lineages below without an account.
+        </p>
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => login(window.location.pathname)}
+          >
+            Sign in to get started
+          </Button>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-serif text-lg tracking-tight">Browse public genealogies</h2>
+          <span className="text-xs text-(--color-fg-muted)">{publics.length}</span>
+        </div>
+        {q.isLoading ? (
+          <div className="h-24 animate-pulse rounded-lg bg-(--color-bg-sunken)" />
+        ) : publics.length === 0 ? (
+          <p className="text-sm text-(--color-fg-muted)">
+            No public genealogies yet. Be the first to share one.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {publics.map((g) => (
+              <GenealogyCard key={g.id} g={g} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

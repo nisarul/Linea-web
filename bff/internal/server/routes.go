@@ -220,13 +220,13 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 
 // --- API proxy ---
 
+// handleAPI forwards /api/* to Linea-server. Unauthenticated
+// requests are forwarded WITHOUT a bearer; the server enforces
+// per-genealogy visibility (Public reads succeed, Private/Unlisted
+// reads return 404, mutating endpoints return 401/403).
 func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request) {
 	if s.apiProxy == nil {
 		http.Error(w, "upstream not configured", http.StatusServiceUnavailable)
-		return
-	}
-	if _, err := s.currentSession(r); err != nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
 	s.apiProxy.ServeHTTP(w, r)
