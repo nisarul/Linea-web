@@ -1,55 +1,93 @@
 # Linea Web
 
-The elegant, accessible web client for [Linea](https://github.com/nisarul/Linea-specs).
-
-Two halves shipped as a single deploy unit:
-
-- **`frontend/`** — React + TypeScript SPA built with Vite + Tailwind. Canvas-based tree visualisation (Konva + d3-hierarchy). Three themes (Light / Dark / System) from day one with no flash.
-- **`bff/`** — Tiny Go Backend-For-Frontend that handles OIDC, holds tokens server-side, exposes a session cookie to the browser, and proxies API calls to [Linea-server](https://github.com/nisarul/Linea-server).
+The elegant, accessible web client for [Linea](https://github.com/nisarul/Linea-specs) —
+a genealogical knowledge graph that records evidence with explicit certainty, gaps with
+explicit size, and identity with auditable history.
 
 > Linea — lineage, without assumptions.
 
-## Status
+Two halves shipped as a single deploy unit:
 
-Pre-release. Implements spec v1.1.0 / Linea-server v0.2.0+.
+- **`frontend/`** — React 19 + TypeScript SPA built with Vite + Tailwind 4. Canvas-based
+  lineage visualisation (Konva + d3-hierarchy). TanStack Router (type-safe routes) +
+  TanStack Query. Three first-class themes (Light / Dark / System) with no flash on load.
+- **`bff/`** — Tiny Go Backend-For-Frontend. Handles OIDC Authorization Code + PKCE,
+  holds tokens server-side in a Badger-backed session store, exposes only an HttpOnly
+  session cookie to the browser, and reverse-proxies API calls to
+  [Linea-server](https://github.com/nisarul/Linea-server).
 
-Built in 10 phases (each independently shippable):
+## Status — v1.0.0
 
-1. ✅ Design system foundation
-2. App shell + auth + dashboard
-3. Genealogy view (read paths)
-4. Canvas tree
-5. Write paths (proposals)
-6. Curator review
-7. Genealogy lifecycle
-8. Public discovery
-9. Polish
-10. Hardening (graduates to 1.0.0)
+Implements the full read + write surface of spec v1.1.0 against Linea-server v0.2.0+.
+
+| Phase | Feature | Status |
+|------:|---------|:------:|
+| 1 | Design system, theming, no-flash boot | ✅ |
+| 2 | App shell, OIDC auth, API proxy | ✅ |
+| 3 | Genealogy CRUD + member management | ✅ |
+| 4 | Persons, person detail, lineage tree canvas | ✅ |
+| 5 | Proposals (submit, list, curator review, bulk reject) | ✅ |
+| 6 | Queries (FindPaths, NKCA) | ✅ |
+| 7 | Public discovery (signed-out browsing) | ✅ |
+| 8–9 | Polish, error boundary, 404 page | ✅ |
+| 10 | Hardening (unit tests, bundle budget, CI) | ✅ |
 
 ## Aesthetic direction
 
 A blend of:
 
-- **Notion + Things** for warmth on user-facing surfaces (person pages, dashboards).
-- **Linear** for cockpit precision (curator review queue, member management, settings).
-- **Substack-tier typography** throughout (serif headlines + humanist sans, generous reading widths, proper hierarchy).
+- **Notion + Things** for warmth on user surfaces (person pages, dashboards).
+- **Linear** for cockpit precision (curator queue, member management, queries).
+- **Substack-tier typography** throughout (serif headlines + humanist sans, generous
+  reading widths, proper hierarchy, OKLCH-based palette).
+
+## Bundle budget
+
+Entry JS gzip stays under **220 kB**; per-chunk gzip under **260 kB**. The lineage tree
+(Konva + d3-hierarchy, ~300 kB raw) is lazy-loaded so the dashboard ships ~183 kB gzip.
+
+CI enforces the budget via `npm run size` after every build.
 
 ## Quick start (dev)
 
+### Full stack with Keycloak (recommended)
+
 ```sh
-# Terminal 1: SPA dev server
+docker compose -f docker-compose.dev.yml up --build
+```
+
+This brings up Keycloak (`:8081`), Linea-server (`:8080`), and Linea-web (`:8090`)
+with a seeded `alice / alice` user. Visit <http://localhost:8090>.
+
+### Frontend-only iteration
+
+```sh
+# Terminal 1
 cd frontend
 npm install
 npm run dev          # Vite at http://localhost:5173
 
-# Terminal 2: BFF
+# Terminal 2
 cd bff
-go run ./cmd/lineabff   # listens at http://localhost:8090
+go run ./cmd/lineabff
 ```
 
-In dev, Vite proxies API calls to the BFF; the BFF proxies them on to a local
-Linea-server. See [docker-compose.dev.yml](./docker-compose.dev.yml) for the full
-local stack (Linea-server + Keycloak + Linea-web).
+Vite proxies `/api` and `/auth` to the BFF.
+
+## Available scripts
+
+```sh
+# Frontend
+npm run dev          # Vite dev server
+npm run build        # TypeScript + Vite production build
+npm run lint         # ESLint flat config
+npm run test         # Vitest unit tests (18 tests across 4 files)
+npm run size         # Enforce bundle-size budget on dist/
+
+# BFF
+go build ./...
+go test ./...
+```
 
 ## License
 

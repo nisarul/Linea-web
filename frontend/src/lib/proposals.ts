@@ -165,7 +165,10 @@ export function prettyKind(k: EntityKind): string {
 export function decodePayload(p?: string): unknown {
   if (!p) return null;
   try {
-    return JSON.parse(atob(p));
+    const bin = atob(p);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return null;
   }
