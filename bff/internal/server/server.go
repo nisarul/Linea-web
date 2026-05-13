@@ -148,8 +148,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// tokenForRequest implements proxy.TokenSource — pulls the access
-// token from the caller's session (refreshing if near expiry).
+// tokenForRequest implements proxy.TokenSource — pulls the bearer
+// token to forward upstream from the caller's session, refreshing
+// if near expiry.
+//
+// We forward the OIDC ID token (not the access token) because:
+//   - The upstream (linea-server) verifies tokens against the OIDC
+//     issuer's JWKS with audience = the BFF's client id. ID tokens
+//     are always signed with that JWKS and have aud = client id.
+//   - With Entra ID and only "openid profile email" scopes, the
+//     access token is a Microsoft Graph token whose signing key is
+//     not in the tenant's discovery JWKS, so signature verification
+//     would fail. Switching to an issued-for-your-API access token
+//     would require defining a custom App ID URI + scope, which we
+//     don't need today.
 func (s *Server) tokenForRequest(r *http.Request) (string, bool) {
 	sess, err := s.currentSession(r)
 	if err != nil {
@@ -173,7 +185,7 @@ func (s *Server) tokenForRequest(r *http.Request) (string, bool) {
 			_ = s.sessions.Update(r.Context(), sess)
 		}
 	}
-	return sess.AccessToken, sess.AccessToken != ""
+	return sess.IDToken, sess.IDToken != ""
 }
 
 // currentSession returns the session bound to the request's
