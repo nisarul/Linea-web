@@ -30,8 +30,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /auth/theme", s.handleSetTheme)
 	s.mux.HandleFunc("GET /auth/theme", s.handleGetTheme)
 
-	s.mux.HandleFunc("GET /auth/login", s.handleLogin)
-	s.mux.HandleFunc("GET /auth/callback", s.handleCallback)
+	s.mux.HandleFunc("GET /auth/providers", s.handleProviders)
+	// Multi-provider routes.
+	s.mux.HandleFunc("GET /auth/login/{provider}", s.handleLogin)
+	s.mux.HandleFunc("GET /auth/callback/{provider}", s.handleCallback)
+	// Legacy single-provider routes (back-compat). They redirect to
+	// the only configured provider when there's exactly one.
+	s.mux.HandleFunc("GET /auth/login", s.handleLegacyLogin)
+	s.mux.HandleFunc("GET /auth/callback", s.handleLegacyCallback)
 	s.mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	s.mux.HandleFunc("GET /auth/me", s.handleMe)
 
@@ -92,9 +98,31 @@ func (s *Server) handleGetTheme(w http.ResponseWriter, r *http.Request) {
 
 // --- OIDC ---
 
+// handleProviders lists the configured providers so the SPA can
+// render a per-provider sign-in button.
+func (s *Server) handleProviders(w http.ResponseWriter, _ *http.Request) {
+	type provDTO struct {
+		Name        string `json:"name"`
+		DisplayName string `json:"displayName"`
+		LoginURL    string `json:"loginUrl"`
+	}
+	out := make([]provDTO, 0, len(s.cfg.Providers))
+	for _, p := range s.cfg.Providers {
+		out = append(out, provDTO{
+			Name:        p.Name,
+			DisplayName: p.DisplayName,
+			LoginURL:    "/auth/login/" + p.Name,
+		})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// handleLogin starts the auth-code + PKCE flow for {provider}.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if s.oidc == nil {
-		http.Error(w, "auth not configured", http.StatusServiceUnavailable)
+	name := r.PathValue("provider")
+	oc, _, ok := s.providerByName(name)
+	if !ok {
+		http.Error(w, "unknown provider", http.StatusNotFound)
 		return
 	}
 	p, err := oidc.NewPKCE()
@@ -102,7 +130,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "pkce init failed", http.StatusInternalServerError)
 		return
 	}
-	// Encode PKCE state in the cookie so we don't need server-side storage.
 	val, err := encodePKCE(p)
 	if err != nil {
 		http.Error(w, "pkce encode failed", http.StatusInternalServerError)
@@ -111,18 +138,37 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     pkceCookie,
 		Value:    val,
-		Path:     "/auth/callback",
+		Path:     "/auth/callback/" + name,
 		MaxAge:   300,
 		HttpOnly: true,
 		Secure:   s.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
-	http.Redirect(w, r, s.oidc.AuthCodeURL(p), http.StatusFound)
+	http.Redirect(w, r, oc.AuthCodeURL(p), http.StatusFound)
 }
 
-func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
-	if s.oidc == nil {
+// handleLegacyLogin keeps the old /auth/login working when there's
+// exactly one provider configured (back-compat for older clients).
+func (s *Server) handleLegacyLogin(w http.ResponseWriter, r *http.Request) {
+	if len(s.cfg.Providers) == 0 {
 		http.Error(w, "auth not configured", http.StatusServiceUnavailable)
+		return
+	}
+	if len(s.cfg.Providers) > 1 {
+		// Force the SPA to choose explicitly.
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	r.SetPathValue("provider", s.cfg.Providers[0].Name)
+	s.handleLogin(w, r)
+}
+
+// handleCallback finishes the auth-code + PKCE flow for {provider}.
+func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("provider")
+	oc, _, ok := s.providerByName(name)
+	if !ok {
+		http.Error(w, "unknown provider", http.StatusNotFound)
 		return
 	}
 	c, err := r.Cookie(pkceCookie)
@@ -132,7 +178,7 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	// Clear the PKCE cookie regardless of outcome.
 	http.SetCookie(w, &http.Cookie{
-		Name: pkceCookie, Value: "", Path: "/auth/callback",
+		Name: pkceCookie, Value: "", Path: "/auth/callback/" + name,
 		MaxAge: -1, HttpOnly: true, Secure: s.cfg.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -156,13 +202,14 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	ex, err := s.oidc.Exchange(ctx, code, p)
+	ex, err := oc.Exchange(ctx, code, p)
 	if err != nil {
-		s.logger.Warn("oidc exchange failed", "err", err)
+		s.logger.Warn("oidc exchange failed", "provider", name, "err", err)
 		http.Error(w, "exchange failed", http.StatusBadGateway)
 		return
 	}
 	id, err := s.sessions.New(r.Context(), session.Session{
+		Provider:     name,
 		Subject:      ex.Identity.Subject,
 		Email:        ex.Identity.Email,
 		Name:         ex.Identity.Name,
@@ -191,6 +238,17 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, dest, http.StatusFound)
 }
 
+// handleLegacyCallback routes the old /auth/callback path when there
+// is exactly one provider configured.
+func (s *Server) handleLegacyCallback(w http.ResponseWriter, r *http.Request) {
+	if len(s.cfg.Providers) != 1 {
+		http.Error(w, "use /auth/callback/{provider}", http.StatusBadRequest)
+		return
+	}
+	r.SetPathValue("provider", s.cfg.Providers[0].Name)
+	s.handleCallback(w, r)
+}
+
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie(session.CookieName)
 	if err == nil {
@@ -212,6 +270,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"authenticated": true,
+		"provider":      sess.Provider,
 		"subject":       sess.Subject,
 		"email":         sess.Email,
 		"name":          sess.Name,

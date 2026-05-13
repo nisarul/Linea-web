@@ -30,6 +30,7 @@ const CookieName = "linea_sid"
 // Session is the server-side record. JSON-serialised in Badger.
 type Session struct {
 	ID           string    `json:"id"`
+	Provider     string    `json:"provider,omitempty"`
 	Subject      string    `json:"sub"`
 	Email        string    `json:"email,omitempty"`
 	Name         string    `json:"name,omitempty"`

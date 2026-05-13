@@ -21,6 +21,7 @@ import { ProposalsListPage } from "@/pages/ProposalsListPage";
 import { ProposalDetailPage } from "@/pages/ProposalDetailPage";
 import { QueriesPage } from "@/pages/QueriesPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { LoginPage } from "@/pages/LoginPage";
 
 // Tree canvas pulls in Konva (~300 kB). Code-split so it only
 // loads when the user opens the Tree tab.
@@ -97,6 +98,12 @@ const queriesRoute = createRoute({
   component: QueriesPage,
 });
 
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   genealogiesRoute,
@@ -109,6 +116,7 @@ const routeTree = rootRoute.addChildren([
     proposalDetailRoute,
     queriesRoute,
   ]),
+  loginRoute,
 ]);
 
 export const router = createRouter({

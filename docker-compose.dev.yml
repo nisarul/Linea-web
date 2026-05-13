@@ -53,11 +53,14 @@ services:
       LINEA_BFF_COOKIE_SECURE: "false"
       LINEA_BFF_SESSION_DIR: "/data/sessions"
       LINEA_BFF_UPSTREAM_URL: "http://lineasrv:8080"
-      LINEA_OIDC_ISSUER: "http://keycloak:8080/realms/linea"
-      LINEA_OIDC_CLIENT_ID: "linea-web"
-      LINEA_OIDC_CLIENT_SECRET: "linea-web-dev-secret"
-      LINEA_OIDC_REDIRECT_URL: "http://localhost:8090/auth/callback"
       LINEA_BFF_POST_LOGIN_URL: "/"
+      # Multi-provider config: dev stack ships only Keycloak.
+      LINEA_OIDC_PROVIDERS: "keycloak"
+      LINEA_OIDC_REDIRECT_BASE: "http://localhost:8090/auth/callback"
+      LINEA_OIDC_KEYCLOAK_DISPLAY_NAME: "Keycloak (dev)"
+      LINEA_OIDC_KEYCLOAK_ISSUER: "http://keycloak:8080/realms/linea"
+      LINEA_OIDC_KEYCLOAK_CLIENT_ID: "linea-web"
+      LINEA_OIDC_KEYCLOAK_CLIENT_SECRET: "linea-web-dev-secret"
     ports:
       - "8090:8090"
     volumes:

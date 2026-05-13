@@ -7,8 +7,9 @@
 # Prereqs (one-time):
 #   1. Re-deploy infra with serverExternalIngress=true so the
 #      Azure linea-server has an external FQDN.
-#   2. Add http://localhost:8090/auth/callback to the Linea-web
-#      Entra app registration's redirect URIs.
+#   2. Add http://localhost:8090/auth/callback/microsoft (and
+#      .../google if using Google) to each provider's app
+#      registration redirect URIs.
 #   3. Create .env.azure (see .env.azure.example) with the values
 #      from your Linea-deploy GitHub secrets.
 #
@@ -25,17 +26,20 @@ services:
     environment:
       LINEA_BFF_ADDR: ":8090"
       LINEA_BFF_COOKIE_SECURE: "false"
-      LINEA_BFF_SESSION_DIR: "/data/sessions"
+      LINEA_BFF_SESSION_DIR: "/tmp/sessions"
       LINEA_BFF_UPSTREAM_URL: "${LINEA_SERVER_URL}"
-      LINEA_OIDC_ISSUER: "${LINEA_OIDC_ISSUER}"
-      LINEA_OIDC_CLIENT_ID: "${LINEA_WEB_CLIENT_ID}"
-      LINEA_OIDC_CLIENT_SECRET: "${LINEA_WEB_CLIENT_SECRET}"
-      LINEA_OIDC_REDIRECT_URL: "http://localhost:8090/auth/callback"
       LINEA_BFF_POST_LOGIN_URL: "/"
+      LINEA_OIDC_PROVIDERS: "${LINEA_OIDC_PROVIDERS:-microsoft}"
+      LINEA_OIDC_REDIRECT_BASE: "http://localhost:8090/auth/callback"
+      LINEA_OIDC_MICROSOFT_DISPLAY_NAME: "Microsoft"
+      LINEA_OIDC_MICROSOFT_ISSUER: "${LINEA_OIDC_MICROSOFT_ISSUER}"
+      LINEA_OIDC_MICROSOFT_CLIENT_ID: "${LINEA_OIDC_MICROSOFT_CLIENT_ID}"
+      LINEA_OIDC_MICROSOFT_CLIENT_SECRET: "${LINEA_OIDC_MICROSOFT_CLIENT_SECRET}"
+      LINEA_OIDC_GOOGLE_DISPLAY_NAME: "Google"
+      LINEA_OIDC_GOOGLE_ISSUER: "https://accounts.google.com"
+      LINEA_OIDC_GOOGLE_CLIENT_ID: "${LINEA_OIDC_GOOGLE_CLIENT_ID:-}"
+      LINEA_OIDC_GOOGLE_CLIENT_SECRET: "${LINEA_OIDC_GOOGLE_CLIENT_SECRET:-}"
     ports:
       - "8090:8090"
-    volumes:
-      - linea-web-azuredev-data:/data
-
-volumes:
-  linea-web-azuredev-data:
+    tmpfs:
+      - /tmp:uid=65532,gid=65532,mode=1777
