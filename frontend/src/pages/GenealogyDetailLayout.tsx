@@ -72,6 +72,7 @@ export function GenealogyDetailLayout() {
           { to: "/g/$id/persons", params: { id }, label: "Persons" },
           { to: "/g/$id/tree", params: { id }, label: "Tree" },
           { to: "/g/$id/proposals", params: { id }, label: "Proposals" },
+          { to: "/g/$id/queries", params: { id }, label: "Queries" },
         ]}
       />
 
