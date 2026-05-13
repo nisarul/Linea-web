@@ -29,6 +29,10 @@ type Config struct {
 	ClientSecret string   // optional (confidential clients only)
 	RedirectURL  string   // BFF's /auth/callback URL
 	Scopes       []string // defaults to [openid, profile, email, offline_access]
+	// ExtraAuthURLParams are appended to every AuthCodeURL call.
+	// Used for provider-specific quirks (e.g. Google needs
+	// access_type=offline + prompt=consent to issue a refresh token).
+	ExtraAuthURLParams map[string]string
 }
 
 // Client wraps the verified OIDC provider + oauth2 config.
@@ -45,7 +49,10 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, errors.New("oidc: IssuerURL, ClientID and RedirectURL are required")
 	}
 	if len(cfg.Scopes) == 0 {
-		cfg.Scopes = []string{gooidc.ScopeOpenID, "profile", "email", gooidc.ScopeOfflineAccess}
+		cfg.Scopes = defaultScopesFor(cfg.IssuerURL)
+	}
+	if cfg.ExtraAuthURLParams == nil {
+		cfg.ExtraAuthURLParams = defaultExtraAuthParamsFor(cfg.IssuerURL)
 	}
 	provider, err := gooidc.NewProvider(ctx, cfg.IssuerURL)
 	if err != nil {
@@ -63,6 +70,34 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 		},
 		verifier: provider.Verifier(&gooidc.Config{ClientID: cfg.ClientID}),
 	}, nil
+}
+
+// defaultScopesFor returns the OIDC scopes appropriate for an issuer.
+// Google rejects the standard "offline_access" scope (it uses
+// access_type=offline instead), so we drop it for that provider.
+func defaultScopesFor(issuer string) []string {
+	base := []string{gooidc.ScopeOpenID, "profile", "email"}
+	if isGoogleIssuer(issuer) {
+		return base
+	}
+	return append(base, gooidc.ScopeOfflineAccess)
+}
+
+// defaultExtraAuthParamsFor returns provider-specific auth-URL
+// parameters (e.g. Google's access_type / prompt to obtain a
+// refresh token).
+func defaultExtraAuthParamsFor(issuer string) map[string]string {
+	if isGoogleIssuer(issuer) {
+		return map[string]string{
+			"access_type": "offline",
+			"prompt":      "consent",
+		}
+	}
+	return nil
+}
+
+func isGoogleIssuer(issuer string) bool {
+	return issuer == "https://accounts.google.com" || issuer == "accounts.google.com"
 }
 
 // PKCE holds the per-request verifier + state. The BFF must
@@ -95,11 +130,15 @@ func NewPKCE() (PKCE, error) {
 func (c *Client) AuthCodeURL(p PKCE) string {
 	sum := sha256.Sum256([]byte(p.CodeVerifier))
 	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
-	return c.oauth.AuthCodeURL(p.State,
+	opts := []oauth2.AuthCodeOption{
 		oauth2.SetAuthURLParam("code_challenge", challenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 		gooidc.Nonce(p.Nonce),
-	)
+	}
+	for k, v := range c.cfg.ExtraAuthURLParams {
+		opts = append(opts, oauth2.SetAuthURLParam(k, v))
+	}
+	return c.oauth.AuthCodeURL(p.State, opts...)
 }
 
 // Identity is the verified subset of ID-token claims the BFF cares about.
