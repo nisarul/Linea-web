@@ -12,6 +12,7 @@ import {
 import { AppShell } from "@/layout/AppShell";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { GenealogiesPage } from "@/pages/GenealogiesPage";
+import { GenealogyDetailPage } from "@/pages/GenealogyDetailPage";
 import { DesignSystemPage } from "@/pages/DesignSystemPage";
 
 const rootRoute = createRootRoute({
@@ -34,6 +35,12 @@ const genealogiesRoute = createRoute({
   component: GenealogiesPage,
 });
 
+const genealogyDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/g/$id",
+  component: GenealogyDetailPage,
+});
+
 const designRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/design",
@@ -43,6 +50,7 @@ const designRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   genealogiesRoute,
+  genealogyDetailRoute,
   designRoute,
 ]);
 

@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Badge, Button, Card, CardBody, CardHeader } from "@/components";
-import { listGenealogies, type Genealogy } from "@/lib/genealogies";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Badge, Button, Card, CardBody, CardHeader, NewGenealogyDialog } from "@/components";
+import {
+  listGenealogies,
+  prettyRole,
+  type Genealogy,
+  type Visibility,
+} from "@/lib/genealogies";
 import { fetchMe, login } from "@/lib/auth";
 
 export function DashboardPage() {
@@ -40,6 +47,8 @@ function SignedOutPitch() {
 }
 
 function DashboardContent() {
+  const nav = useNavigate();
+  const [createOpen, setCreateOpen] = useState(false);
   const q = useQuery({
     queryKey: ["genealogies"],
     queryFn: listGenealogies,
@@ -69,7 +78,9 @@ function DashboardContent() {
             Your genealogies, the ones you contribute to, and recent public ones.
           </p>
         </div>
-        <Button variant="primary">New genealogy</Button>
+        <Button variant="primary" onClick={() => setCreateOpen(true)}>
+          New genealogy
+        </Button>
       </header>
 
       {q.isLoading && <SkeletonGrid />}
@@ -88,6 +99,14 @@ function DashboardContent() {
           <Section title="Recent public" items={publics} emptyHint="No public genealogies yet." />
         </>
       )}
+
+      <NewGenealogyDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(id) => {
+          void nav({ to: "/g/$id", params: { id } });
+        }}
+      />
     </div>
   );
 }
@@ -122,30 +141,32 @@ function Section({
 
 function GenealogyCard({ g }: { g: Genealogy }) {
   return (
-    <Card elevation="raised" interactive>
-      <CardHeader className="flex items-center justify-between gap-2">
-        <h3 className="truncate font-serif text-base tracking-tight">{g.name}</h3>
-        <VisibilityBadge v={g.visibility} />
-      </CardHeader>
-      <CardBody className="text-xs text-(--color-fg-muted)">
-        <div>Role: {prettyRole(g.myRole)}</div>
-        <div className="mt-1">Created: {formatDate(g.createdAt)}</div>
-      </CardBody>
-    </Card>
+    <Link
+      to="/g/$id"
+      params={{ id: g.id }}
+      className="block rounded-(--radius-lg) outline-none focus-visible:ring-2 focus-visible:ring-(--color-accent)/40"
+    >
+      <Card elevation="raised" interactive>
+        <CardHeader className="flex items-center justify-between gap-2">
+          <h3 className="truncate font-serif text-base tracking-tight">{g.name}</h3>
+          <VisibilityBadge v={g.visibility} />
+        </CardHeader>
+        <CardBody className="text-xs text-(--color-fg-muted)">
+          <div>Role: {prettyRole(g.myRole)}</div>
+          <div className="mt-1">Created: {formatDate(g.createdAt)}</div>
+        </CardBody>
+      </Card>
+    </Link>
   );
 }
 
-function VisibilityBadge({ v }: { v: Genealogy["visibility"] }) {
+function VisibilityBadge({ v }: { v: Visibility }) {
   switch (v) {
     case "VISIBILITY_PUBLIC":   return <Badge tone="success">Public</Badge>;
     case "VISIBILITY_UNLISTED": return <Badge tone="info">Unlisted</Badge>;
     case "VISIBILITY_PRIVATE":  return <Badge tone="neutral">Private</Badge>;
     default:                    return <Badge>—</Badge>;
   }
-}
-
-function prettyRole(r: Genealogy["myRole"]): string {
-  return r.replace(/^GENEALOGY_ROLE_/, "").toLowerCase();
 }
 
 function formatDate(iso: string): string {

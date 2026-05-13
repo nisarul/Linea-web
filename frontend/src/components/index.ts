@@ -11,4 +11,13 @@ export type { CardProps, CardElevation } from "./Card";
 export { Badge } from "./Badge";
 export type { BadgeProps, BadgeTone } from "./Badge";
 
+export { Dialog } from "./Dialog";
+export type { DialogProps } from "./Dialog";
+
+export { Select } from "./Select";
+export type { SelectProps } from "./Select";
+
+export { NewGenealogyDialog } from "./NewGenealogyDialog";
+export type { NewGenealogyDialogProps } from "./NewGenealogyDialog";
+
 export { ThemeToggle } from "./ThemeToggle";
