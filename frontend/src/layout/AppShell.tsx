@@ -52,7 +52,6 @@ function Sidebar() {
       <nav aria-label="Primary" className="flex flex-col gap-1">
         <SidebarLink to="/">Dashboard</SidebarLink>
         <SidebarLink to="/genealogies">Genealogies</SidebarLink>
-        <SidebarLink to="/design">Design system</SidebarLink>
       </nav>
     </aside>
   );
