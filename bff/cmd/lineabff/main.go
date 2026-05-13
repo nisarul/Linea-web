@@ -50,7 +50,7 @@ func run() error {
 		slog.String("addr", cfg.Addr),
 		slog.String("static_dir", cfg.StaticDir),
 		slog.String("upstream", cfg.UpstreamURL),
-		slog.Bool("oidc", cfg.OIDCIssuerURL != ""),
+		slog.Int("providers", len(cfg.Providers)),
 	)
 
 	go func() {
